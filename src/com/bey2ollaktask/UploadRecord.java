@@ -61,12 +61,10 @@ public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 	@Override
 	protected Boolean doInBackground(Void... params) {
 		try {
-			// By creating a request, we get a handle to the putFile operation,
-			// so we can cancel it later if we want to
 
 			File tmpFile = new File(fileName);
 			FileInputStream fis = new FileInputStream(tmpFile);
-
+			//preparing request 
 			mRequest = mApi.putFileRequest(fileName, fis, tmpFile.length(),
 					null, true, new ProgressListener() {
 						@Override

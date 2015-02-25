@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Stack;
 
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -44,12 +45,11 @@ public class DownloadRecordedAudio extends AsyncTask<Void, Long, Boolean> {
     MediaPlayer mPlayer;
 
 
-    public DownloadRecordedAudio(Context context, DropboxAPI<?> api, String recordName,String fileName, MediaPlayer mPlayer) {
+    public DownloadRecordedAudio(Context context, DropboxAPI<?> api, String recordName,String fileName) {
         mContext = context.getApplicationContext();
         this.fileName = fileName;
         mApi = api;
         mPath = recordName;
-        this.mPlayer = mPlayer;
 
         mDialog = new ProgressDialog(context);
         mDialog.setMessage("Downloading recorded file");
@@ -173,6 +173,8 @@ public class DownloadRecordedAudio extends AsyncTask<Void, Long, Boolean> {
         	mPlayer = new MediaPlayer();
         	Toast.makeText(mContext, "Now playing", Toast.LENGTH_SHORT).show();
         	try {
+        		File file = new File(Environment.getExternalStorageDirectory() + "/Bey2ollakRecord");
+        		long size = dirSize(file);
 				mPlayer.setDataSource(Environment.getExternalStorageDirectory() + "/Bey2ollakRecord" + "/" + fileName);
 				mPlayer.prepare();
 				mPlayer.start();
@@ -199,6 +201,30 @@ public class DownloadRecordedAudio extends AsyncTask<Void, Long, Boolean> {
     private void showToast(String msg) {
         Toast error = Toast.makeText(mContext, msg, Toast.LENGTH_LONG);
         error.show();
+    }
+    
+    private static long dirSize(File dir) {
+        long result = 0;
+
+        Stack<File> dirlist= new Stack<File>();
+        dirlist.clear();
+
+        dirlist.push(dir);
+
+        while(!dirlist.isEmpty())
+        {
+            File dirCurrent = dirlist.pop();
+
+            File[] fileList = dirCurrent.listFiles();
+            for(File f: fileList){
+                if(f.isDirectory())
+                    dirlist.push(f);
+                else
+                    result += f.length();
+            }
+        }
+
+        return result;
     }
 
 

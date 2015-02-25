@@ -6,14 +6,12 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
-import android.annotation.SuppressLint;
-import android.app.LoaderManager.LoaderCallbacks;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Loader;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.media.MediaPlayer;
@@ -24,12 +22,14 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.v7.app.ActionBarActivity;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
@@ -38,7 +38,6 @@ import android.widget.Toast;
 
 import com.adatpter.GetDataAdapter;
 import com.dropbox.client2.DropboxAPI;
-import com.dropbox.client2.DropboxAPI.DropboxFileInfo;
 import com.dropbox.client2.DropboxAPI.Entry;
 import com.dropbox.client2.android.AndroidAuthSession;
 import com.dropbox.client2.exception.DropboxException;
@@ -46,9 +45,7 @@ import com.dropbox.client2.session.AccessTokenPair;
 import com.dropbox.client2.session.AppKeyPair;
 import com.model.GetDataModel;
 
-
-public class AudioRecordTest extends ActionBarActivity implements
-		LoaderCallbacks<List<DropboxFileInfo>> {
+public class AudioRecord extends ActionBarActivity {
 
 	private ImageButton startButton;
 	private ImageButton stopButton;
@@ -61,18 +58,20 @@ public class AudioRecordTest extends ActionBarActivity implements
 
 	GetDataAdapter adapter;
 
+	File renameFrom, renameTo;
+
 	ListView listView;
 
 	Date date;
 	DateFormat df;
 
 	String audioName;
+	String changedFileName;
+	String sdPath = Environment.getExternalStorageDirectory().getAbsolutePath();
 
 	private Button mSubmit;
 	private Button getData;
 	RelativeLayout mDisplay;
-
-	private boolean mLoggedIn;
 
 	private static final String APP_KEY = "o1v5qhtfd2nbpxt";
 	private static final String APP_SECRET = "c9g649r71enza01";
@@ -80,8 +79,6 @@ public class AudioRecordTest extends ActionBarActivity implements
 	private static final String ACCOUNT_PREFS_NAME = "prefs";
 	private static final String ACCESS_KEY_NAME = "ACCESS_KEY";
 	private static final String ACCESS_SECRET_NAME = "ACCESS_SECRET";
-
-	private static final boolean USE_OAUTH1 = false;
 
 	DropboxAPI<AndroidAuthSession> mApi;
 
@@ -98,10 +95,9 @@ public class AudioRecordTest extends ActionBarActivity implements
 	boolean mStartRecording;
 	boolean mStartPlaying;
 
-	private static final String LOG_TAG = "AudioRecordTest";
+	private static final String LOG_TAG = "AudioRecord";
 	private static String mFileName = null;
 
-	// private RecordButton mRecordButton = null;
 	private MediaRecorder mRecorder = null;
 
 	private MediaPlayer mPlayer = null;
@@ -130,25 +126,11 @@ public class AudioRecordTest extends ActionBarActivity implements
 
 		mDisplay = (RelativeLayout) findViewById(R.id.layout);
 
-		// ArrayAdapter<String> ad = new ArrayAdapter<String>(ctx,
-		// android.R.layout.simple_list_item_1,fnames);
-
 		mSubmit.setOnClickListener(new OnClickListener() {
-			@SuppressWarnings("deprecation")
 			public void onClick(View v) {
-				// This logs you out if you're logged in, or vice versa
-				if (mLoggedIn) {
-					logOut();
-				} else {
-					// Start the remote authentication
-					if (USE_OAUTH1) {
-						mApi.getSession().startAuthentication(
-								AudioRecordTest.this);
-					} else {
-						mApi.getSession().startOAuth2Authentication(
-								AudioRecordTest.this);
-					}
-				}
+
+				// Start the remote authentication
+				mApi.getSession().startOAuth2Authentication(AudioRecord.this);
 			}
 		});
 
@@ -170,11 +152,9 @@ public class AudioRecordTest extends ActionBarActivity implements
 
 				onRecord(mStartRecording);
 				if (mStartRecording) {
-					// setText("Stop recording");
 					stopButton.setVisibility(View.VISIBLE);
 					startButton.setVisibility(View.INVISIBLE);
 				} else {
-					// setText("Start recording");
 					stopButton.setVisibility(View.INVISIBLE);
 					startButton.setVisibility(View.VISIBLE);
 				}
@@ -195,6 +175,33 @@ public class AudioRecordTest extends ActionBarActivity implements
 				customHandler.removeCallbacks(updateTimerThread);
 				stopButton.setVisibility(View.INVISIBLE);
 				startButton.setVisibility(View.VISIBLE);
+				// alertdialog for renaming file
+				AlertDialog.Builder builder = new AlertDialog.Builder(
+						AudioRecord.this);
+				builder.setTitle("Enter file name");
+
+				// Set up the input
+				final EditText input = new EditText(AudioRecord.this);
+				// normal text type
+				input.setInputType(InputType.TYPE_CLASS_TEXT
+						| InputType.TYPE_TEXT_VARIATION_NORMAL);
+				builder.setView(input);
+
+				// Set up the buttons
+				builder.setPositiveButton("OK",
+						new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialog,
+									int which) {
+								changedFileName = input.getText().toString();
+								renameFrom = new File(mFileName);
+								renameTo = new File(sdPath, changedFileName
+										+ ".mp3");
+								renameFrom.renameTo(renameTo);
+							}
+						});
+
+				builder.show();
 
 			}
 		});
@@ -206,11 +213,6 @@ public class AudioRecordTest extends ActionBarActivity implements
 				mStartPlaying = true;
 				recordButton.setEnabled(true);
 				onPlay(mStartPlaying);
-				if (mStartPlaying) {
-					// setText("Stop playing");
-				} else {
-					// setText("Start playing");
-				}
 				mStartPlaying = !mStartPlaying;
 
 			}
@@ -221,11 +223,11 @@ public class AudioRecordTest extends ActionBarActivity implements
 			@Override
 			public void onClick(View v) {
 
-				File outFile = new File(mFileName);
+				File outFile = new File(renameTo.toString());
 
-				if (mFileName != null) {
-					UploadRecord upload = new UploadRecord(
-							AudioRecordTest.this, mApi, mFileName, outFile);
+				if (renameTo != null) {
+					UploadRecord upload = new UploadRecord(AudioRecord.this,
+							mApi, renameTo.toString(), outFile);
 					upload.execute();
 				}
 			}
@@ -237,7 +239,7 @@ public class AudioRecordTest extends ActionBarActivity implements
 			@Override
 			public void onClick(View v) {
 
-				GetDataAsync get = new GetDataAsync(AudioRecordTest.this, mApi);
+				GetDataAsync get = new GetDataAsync(AudioRecord.this, mApi);
 				get.execute();
 
 			}
@@ -306,7 +308,7 @@ public class AudioRecordTest extends ActionBarActivity implements
 	private void startPlaying() {
 		mPlayer = new MediaPlayer();
 		try {
-			mPlayer.setDataSource(mFileName);
+			mPlayer.setDataSource(sdPath + "/" + changedFileName + ".mp3");
 			mPlayer.prepare();
 			mPlayer.start();
 		} catch (IOException e) {
@@ -340,62 +342,17 @@ public class AudioRecordTest extends ActionBarActivity implements
 	private void stopRecording() {
 		mRecorder.stop();
 		mRecorder.release();
-		// mRecorder = null;
 	}
 
-	class RecordButton extends Button {
-
-		OnClickListener clicker = new OnClickListener() {
-			public void onClick(View v) {
-				onRecord(mStartRecording);
-				if (mStartRecording) {
-					setText("Stop recording");
-				} else {
-					setText("Start recording");
-				}
-				mStartRecording = !mStartRecording;
-			}
-		};
-
-		public RecordButton(Context ctx) {
-			super(ctx);
-			setText("Start recording");
-			setOnClickListener(clicker);
-		}
-	}
-
-	class PlayButton extends Button {
-		boolean mStartPlaying = true;
-
-		OnClickListener clicker = new OnClickListener() {
-			public void onClick(View v) {
-				onPlay(mStartPlaying);
-				if (mStartPlaying) {
-					setText("Stop playing");
-				} else {
-					setText("Start playing");
-				}
-				mStartPlaying = !mStartPlaying;
-			}
-		};
-
-		public PlayButton(Context ctx) {
-			super(ctx);
-			setText("Start playing");
-			setOnClickListener(clicker);
-		}
-	}
-
-	public AudioRecordTest() {
+	public AudioRecord() {
 		date = new Date();
 		df = new SimpleDateFormat("yyyy-MM-dd-kk-mm-ss", Locale.US);
 
 		audioName = df.format(date) + ".mp3";
-
-		mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-		mFileName += "/" + audioName;
+		mFileName = sdPath + "/" + audioName;
 	}
 
+	// Timer
 	private Runnable updateTimerThread = new Runnable() {
 
 		public void run() {
@@ -452,25 +409,7 @@ public class AudioRecordTest extends ActionBarActivity implements
 		}
 	}
 
-	private void logOut() {
-		// Remove credentials from the session
-		mApi.getSession().unlink();
-
-		// Clear our stored keys
-		clearKeys();
-		// Change UI state to display logged out version
-		setLoggedIn(false);
-	}
-
-	private void clearKeys() {
-		SharedPreferences prefs = getSharedPreferences(ACCOUNT_PREFS_NAME, 0);
-		Editor edit = prefs.edit();
-		edit.clear();
-		edit.commit();
-	}
-
 	private void setLoggedIn(boolean loggedIn) {
-		mLoggedIn = loggedIn;
 		if (loggedIn) {
 			mSubmit.setVisibility(View.GONE);
 			mDisplay.setVisibility(View.VISIBLE);
@@ -511,23 +450,6 @@ public class AudioRecordTest extends ActionBarActivity implements
 	private void showToast(String msg) {
 		Toast error = Toast.makeText(this, msg, Toast.LENGTH_LONG);
 		error.show();
-	}
-
-	@Override
-	public Loader<List<DropboxFileInfo>> onCreateLoader(int id, Bundle args) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void onLoadFinished(Loader<List<DropboxFileInfo>> loader,
-			List<DropboxFileInfo> data) {
-
-	}
-
-	@Override
-	public void onLoaderReset(Loader<List<DropboxFileInfo>> loader) {
-
 	}
 
 	public class GetDataAsync extends
@@ -595,9 +517,8 @@ public class AudioRecordTest extends ActionBarActivity implements
 						GetDataModel obj = (GetDataModel) listView.getAdapter()
 								.getItem(position);
 						DownloadRecordedAudio download = new DownloadRecordedAudio(
-								AudioRecordTest.this, mApi,
-								"/storage/emulated/0/" + obj.Name, obj.Name,
-								mPlayer);
+								AudioRecord.this, mApi, "/storage/emulated/0/"
+										+ obj.Name, obj.Name);
 						download.execute();
 
 					}
