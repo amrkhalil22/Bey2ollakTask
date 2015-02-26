@@ -64,7 +64,7 @@ public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 
 			File tmpFile = new File(fileName);
 			FileInputStream fis = new FileInputStream(tmpFile);
-			//preparing request 
+			// preparing request
 			mRequest = mApi.putFileRequest(fileName, fis, tmpFile.length(),
 					null, true, new ProgressListener() {
 						@Override
@@ -139,8 +139,6 @@ public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 		mDialog.dismiss();
 		if (result) {
 			showToast("Recorded file successfully uploaded");
-		} else if (mErrorMsg == null) {
-			showToast("You should record first");
 		} else {
 			showToast(mErrorMsg);
 		}

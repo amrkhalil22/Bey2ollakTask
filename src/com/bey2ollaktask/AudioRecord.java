@@ -16,6 +16,7 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -222,13 +223,16 @@ public class AudioRecord extends ActionBarActivity {
 
 			@Override
 			public void onClick(View v) {
-
-				File outFile = new File(renameTo.toString());
-
 				if (renameTo != null) {
+
+					File outFile = new File(renameTo.toString());
+
 					UploadRecord upload = new UploadRecord(AudioRecord.this,
 							mApi, renameTo.toString(), outFile);
 					upload.execute();
+				} else {
+					Toast.makeText(context, "Record first", Toast.LENGTH_SHORT)
+							.show();
 				}
 			}
 		});
@@ -238,9 +242,12 @@ public class AudioRecord extends ActionBarActivity {
 
 			@Override
 			public void onClick(View v) {
-
-				GetDataAsync get = new GetDataAsync(AudioRecord.this, mApi);
-				get.execute();
+				if (isNetworkAvailable(context)) {
+					GetDataAsync get = new GetDataAsync(AudioRecord.this, mApi);
+					get.execute();
+				}
+				Toast.makeText(context, "Check internet connection",
+						Toast.LENGTH_SHORT).show();
 
 			}
 		});
@@ -525,6 +532,12 @@ public class AudioRecord extends ActionBarActivity {
 				});
 			}
 		}
+	}
+
+	public static boolean isNetworkAvailable(Context ctx) {
+		return ((ConnectivityManager) ctx
+				.getSystemService(Context.CONNECTIVITY_SERVICE))
+				.getActiveNetworkInfo() != null;
 	}
 
 }
