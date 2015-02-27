@@ -184,6 +184,7 @@ public class AudioRecord extends ActionBarActivity {
 				input.setInputType(InputType.TYPE_CLASS_TEXT
 						| InputType.TYPE_TEXT_VARIATION_NORMAL);
 				builder.setView(input);
+				builder.setCancelable(false);
 
 				// Set up the buttons
 				builder.setPositiveButton("OK",
