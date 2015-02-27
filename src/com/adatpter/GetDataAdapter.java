@@ -2,9 +2,6 @@ package com.adatpter;
 
 import java.util.ArrayList;
 
-import com.bey2ollaktask.R;
-import com.model.GetDataModel;
-
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,14 +9,17 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-public class GetDataAdapter extends ArrayAdapter<GetDataModel> {
+import com.bey2ollaktask.R;
+import com.dropbox.client2.DropboxAPI.Entry;
 
-	ArrayList<GetDataModel> val;
+public class GetDataAdapter extends ArrayAdapter<Entry> {
+
+	ArrayList<Entry> val;
 	Context ctx;
 	int pos;
 	ViewHolder holder;
 
-	public GetDataAdapter(Context ctx, int resource, ArrayList<GetDataModel> val) {
+	public GetDataAdapter(Context ctx, int resource, ArrayList<Entry> val) {
 		super(ctx, resource, val);
 		this.ctx = ctx;
 		this.val = val;
@@ -46,7 +46,7 @@ public class GetDataAdapter extends ArrayAdapter<GetDataModel> {
 			holder = (ViewHolder) convertView.getTag();
 
 		}
-		holder.Name.setText(val.get(position).getName());
+		holder.Name.setText(val.get(position).fileName());
 		return convertView;
 
 	}

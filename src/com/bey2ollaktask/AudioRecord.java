@@ -44,7 +44,6 @@ import com.dropbox.client2.android.AndroidAuthSession;
 import com.dropbox.client2.exception.DropboxException;
 import com.dropbox.client2.session.AccessTokenPair;
 import com.dropbox.client2.session.AppKeyPair;
-import com.model.GetDataModel;
 
 public class AudioRecord extends ActionBarActivity {
 
@@ -90,7 +89,6 @@ public class AudioRecord extends ActionBarActivity {
 	private Handler customHandler = new Handler();
 
 	long timeInMilliseconds = 0L;
-	long timeSwapBuff = 0L;
 	long updatedTime = 0L;
 
 	boolean mStartRecording;
@@ -109,7 +107,7 @@ public class AudioRecord extends ActionBarActivity {
 		// Authentication to dropbox
 		AndroidAuthSession session = buildSession();
 		mApi = new DropboxAPI<AndroidAuthSession>(session);
-		setContentView(R.layout.activity_audio_record_test);
+		setContentView(R.layout.activity_audio_record);
 		context = this;
 
 		timerValue = (TextView) findViewById(R.id.timerValue);
@@ -172,7 +170,6 @@ public class AudioRecord extends ActionBarActivity {
 				recordButton.setEnabled(true);
 				stopRecording();
 
-				timeSwapBuff = 0;
 				customHandler.removeCallbacks(updateTimerThread);
 				stopButton.setVisibility(View.INVISIBLE);
 				startButton.setVisibility(View.VISIBLE);
@@ -228,11 +225,10 @@ public class AudioRecord extends ActionBarActivity {
 					File outFile = new File(renameTo.toString());
 
 					UploadRecord upload = new UploadRecord(AudioRecord.this,
-							mApi, renameTo.toString(), outFile);
+							mApi,  outFile);
 					upload.execute();
 				} else {
-					Toast.makeText(context, "Record first", Toast.LENGTH_SHORT)
-							.show();
+					showToast("Record first");
 				}
 			}
 		});
@@ -245,15 +241,23 @@ public class AudioRecord extends ActionBarActivity {
 				if (isNetworkAvailable(context)) {
 					GetDataAsync get = new GetDataAsync(AudioRecord.this, mApi);
 					get.execute();
+				} else {
+					showToast("Check internet connection");
 				}
-				Toast.makeText(context, "Check internet connection",
-						Toast.LENGTH_SHORT).show();
 
 			}
 		});
 
 		setLoggedIn(mApi.getSession().isLinked());
 
+	}
+
+	public AudioRecord() {
+		date = new Date();
+		df = new SimpleDateFormat("yyyy-MM-dd-kk-mm-ss", Locale.US);
+
+		audioName = df.format(date) + ".mp3";
+		mFileName = sdPath + "/" + audioName;
 	}
 
 	@Override
@@ -329,6 +333,7 @@ public class AudioRecord extends ActionBarActivity {
 		mPlayer = null;
 	}
 
+	// start recording
 	private void startRecording() {
 		mRecorder = new MediaRecorder();
 		mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -346,17 +351,10 @@ public class AudioRecord extends ActionBarActivity {
 		mRecorder.start();
 	}
 
+	// stop recording
 	private void stopRecording() {
 		mRecorder.stop();
 		mRecorder.release();
-	}
-
-	public AudioRecord() {
-		date = new Date();
-		df = new SimpleDateFormat("yyyy-MM-dd-kk-mm-ss", Locale.US);
-
-		audioName = df.format(date) + ".mp3";
-		mFileName = sdPath + "/" + audioName;
 	}
 
 	// Timer
@@ -366,15 +364,14 @@ public class AudioRecord extends ActionBarActivity {
 
 			timeInMilliseconds = SystemClock.uptimeMillis() - startTime;
 
-			updatedTime = timeSwapBuff + timeInMilliseconds;
+			updatedTime = timeInMilliseconds;
 
 			int secs = (int) (updatedTime / 1000);
 			int mins = secs / 60;
 			secs = secs % 60;
 			int milliseconds = (int) (updatedTime % 1000);
 			if (secs == 30) {
-				Toast.makeText(getApplicationContext(),
-						"Maximum lenght = 30 secs", Toast.LENGTH_LONG).show();
+				showToast("Maximum lenght = 30 secs");
 				customHandler.removeCallbacks(updateTimerThread);
 			} else {
 				timerValue.setText("" + mins + ":"
@@ -423,7 +420,6 @@ public class AudioRecord extends ActionBarActivity {
 		} else {
 			mSubmit.setText("Link with Dropbox");
 			mDisplay.setVisibility(View.GONE);
-			// mImage.setImageDrawable(null);
 		}
 	}
 
@@ -455,16 +451,15 @@ public class AudioRecord extends ActionBarActivity {
 	}
 
 	private void showToast(String msg) {
-		Toast error = Toast.makeText(this, msg, Toast.LENGTH_LONG);
+		Toast error = Toast.makeText(this, msg, Toast.LENGTH_SHORT);
 		error.show();
 	}
 
-	public class GetDataAsync extends
-			AsyncTask<Void, Void, ArrayList<GetDataModel>> {
+	// async class to get saved records from my dropbox
+	public class GetDataAsync extends AsyncTask<Void, Void, ArrayList<Entry>> {
 
 		private DropboxAPI<?> mApi;
 		Context ctx;
-		ArrayList<GetDataModel> arrayList;
 
 		public GetDataAsync(Context ctx, DropboxAPI<?> mApi) {
 			this.ctx = ctx;
@@ -475,45 +470,33 @@ public class AudioRecord extends ActionBarActivity {
 
 		}
 
-		// async class to get saved records from my dropbox
 		@Override
-		protected ArrayList<GetDataModel> doInBackground(Void... params) {
-			arrayList = new ArrayList<GetDataModel>();
-			int i = 0;
+		protected ArrayList<Entry> doInBackground(Void... params) {
 			Entry dirent = null;
 			try {
-				dirent = mApi.metadata("/storage/emulated/0", 1000, null, true,
+				dirent = mApi.metadata("/", 1000, null, true,
 						null);
 			} catch (DropboxException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 			ArrayList<Entry> files = new ArrayList<Entry>();
-			ArrayList<String> dir = new ArrayList<String>();
-			for (Entry ent : dirent.contents) {
-				files.add(ent);// Add it to the list of thumbs we can choose
-								// from
-				GetDataModel MyModel = new GetDataModel();
-				MyModel.setName(ent.fileName());
-				MyModel.setPath(ent.path);
-				MyModel.setDateModified(ent.modified);
-				arrayList.add(MyModel);
-				dir.add(new String(files.get(i++).path));
-			}
-			i = 0;
+			for (Entry ent : dirent.contents)
+				files.add(ent);// Add it to the list 
 
-			return arrayList;
+			return files;
 		}
 
 		@Override
-		protected void onPostExecute(ArrayList<GetDataModel> result) {
+		protected void onPostExecute(ArrayList<Entry> result) {
 			super.onPostExecute(result);
 			mDialog.dismiss();
+			adapter = new GetDataAdapter(ctx, R.id.listView1, result);
 			if (result.isEmpty()) {
-				Toast.makeText(ctx, "There is no uploaded record",
-						Toast.LENGTH_SHORT).show();
+				showToast("There is no uploaded record");
+				listView.setAdapter(null);
 			} else {
-				adapter = new GetDataAdapter(ctx, R.id.listView1, result);
+
 				listView.setAdapter(adapter);
 				listView.setOnItemClickListener(new OnItemClickListener() {
 
@@ -521,11 +504,11 @@ public class AudioRecord extends ActionBarActivity {
 					public void onItemClick(AdapterView<?> parent, View view,
 							int position, long id) {
 
-						GetDataModel obj = (GetDataModel) listView.getAdapter()
-								.getItem(position);
+						Entry obj = (Entry) listView.getAdapter().getItem(
+								position);
 						DownloadRecordedAudio download = new DownloadRecordedAudio(
-								AudioRecord.this, mApi, "/storage/emulated/0/"
-										+ obj.Name, obj.Name);
+								AudioRecord.this, mApi, obj.path, obj
+										.fileName());
 						download.execute();
 
 					}

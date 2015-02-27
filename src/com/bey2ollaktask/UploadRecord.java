@@ -25,7 +25,7 @@ import com.dropbox.client2.exception.DropboxUnlinkedException;
 public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 
 	private DropboxAPI<?> mApi;
-	private String fileName;
+	// private String fileName;
 
 	private long mFileLen;
 	private UploadRequest mRequest;
@@ -33,15 +33,13 @@ public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 	private final ProgressDialog mDialog;
 
 	private String mErrorMsg;
+	File file;
 
-	public UploadRecord(Context context, DropboxAPI<?> api, String fileName,
-			File file) {
+	public UploadRecord(Context context, DropboxAPI<?> api, File file) {
 		mContext = context.getApplicationContext();
-
+		this.file = file;
 		mFileLen = file.length();
 		mApi = api;
-		this.fileName = fileName;
-		// progress dialog
 		mDialog = new ProgressDialog(context);
 		mDialog.setMax(100);
 		mDialog.setMessage("Uploading " + file.getName());
@@ -62,10 +60,10 @@ public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 	protected Boolean doInBackground(Void... params) {
 		try {
 
-			File tmpFile = new File(fileName);
-			FileInputStream fis = new FileInputStream(tmpFile);
+			// File tmpFile = new File(fileName);
+			FileInputStream fis = new FileInputStream(file);
 			// preparing request
-			mRequest = mApi.putFileRequest(fileName, fis, tmpFile.length(),
+			mRequest = mApi.putFileRequest("/"+file.getName(), fis, mFileLen,
 					null, true, new ProgressListener() {
 						@Override
 						public long progressInterval() {
