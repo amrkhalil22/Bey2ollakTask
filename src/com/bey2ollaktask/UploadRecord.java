@@ -25,7 +25,6 @@ import com.dropbox.client2.exception.DropboxUnlinkedException;
 public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 
 	private DropboxAPI<?> mApi;
-	// private String fileName;
 
 	private long mFileLen;
 	private UploadRequest mRequest;
@@ -60,7 +59,6 @@ public class UploadRecord extends AsyncTask<Void, Long, Boolean> {
 	protected Boolean doInBackground(Void... params) {
 		try {
 
-			// File tmpFile = new File(fileName);
 			FileInputStream fis = new FileInputStream(file);
 			// preparing request
 			mRequest = mApi.putFileRequest("/"+file.getName(), fis, mFileLen,
