@@ -57,6 +57,7 @@ public class AudioRecord extends ActionBarActivity {
 	Context context;
 
 	GetDataAdapter adapter;
+	ArrayList<Entry> savedResult;
 
 	File renameFrom, renameTo;
 
@@ -124,6 +125,37 @@ public class AudioRecord extends ActionBarActivity {
 		mSubmit = (Button) findViewById(R.id.auth_button);
 
 		mDisplay = (RelativeLayout) findViewById(R.id.layout);
+		//Handling screen rotation without losing data
+		//get saved states before rotation
+		if (icicle != null && (icicle.getSerializable("array") != null)) {
+			savedResult = (ArrayList<Entry>) icicle.getSerializable("array");
+			adapter = new GetDataAdapter(context, R.id.listView1, savedResult);
+			if (savedResult.isEmpty()) {
+				showToast("There is no uploaded record");
+				listView.setAdapter(null);
+			} else {
+
+				listView.setAdapter(adapter);
+				listView.setOnItemClickListener(new OnItemClickListener() {
+
+					@Override
+					public void onItemClick(AdapterView<?> parent, View view,
+							int position, long id) {
+
+						Entry obj = (Entry) listView.getAdapter().getItem(
+								position);
+						DownloadRecordedAudio download = new DownloadRecordedAudio(
+								AudioRecord.this, mApi, obj.path, obj
+										.fileName());
+						download.execute();
+
+					}
+				});
+			}
+
+		}
+
+		savedResult = new ArrayList<Entry>();
 
 		mSubmit.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
@@ -226,7 +258,7 @@ public class AudioRecord extends ActionBarActivity {
 					File outFile = new File(renameTo.toString());
 
 					UploadRecord upload = new UploadRecord(AudioRecord.this,
-							mApi,  outFile);
+							mApi, outFile);
 					upload.execute();
 				} else {
 					showToast("Record first");
@@ -475,15 +507,14 @@ public class AudioRecord extends ActionBarActivity {
 		protected ArrayList<Entry> doInBackground(Void... params) {
 			Entry dirent = null;
 			try {
-				dirent = mApi.metadata("/", 1000, null, true,
-						null);
+				dirent = mApi.metadata("/", 1000, null, true, null);
 			} catch (DropboxException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 			ArrayList<Entry> files = new ArrayList<Entry>();
 			for (Entry ent : dirent.contents)
-				files.add(ent);// Add it to the list 
+				files.add(ent);// Add it to the list
 
 			return files;
 		}
@@ -492,6 +523,7 @@ public class AudioRecord extends ActionBarActivity {
 		protected void onPostExecute(ArrayList<Entry> result) {
 			super.onPostExecute(result);
 			mDialog.dismiss();
+			savedResult = result;
 			adapter = new GetDataAdapter(ctx, R.id.listView1, result);
 			if (result.isEmpty()) {
 				showToast("There is no uploaded record");
@@ -522,6 +554,21 @@ public class AudioRecord extends ActionBarActivity {
 		return ((ConnectivityManager) ctx
 				.getSystemService(Context.CONNECTIVITY_SERVICE))
 				.getActiveNetworkInfo() != null;
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		// TODO Auto-generated method stub
+		super.onSaveInstanceState(outState);
+		outState.putSerializable("array", savedResult);
+	}
+
+	@Override
+	protected void onRestoreInstanceState(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onRestoreInstanceState(savedInstanceState);
+		savedResult = (ArrayList<Entry>) savedInstanceState
+				.getSerializable("array");
 	}
 
 }
